@@ -1,74 +1,87 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Basic CSWH</title>
-  </head>
-  <body>
-    <h1>Teste de Conexão</h1>
-    <div
-      id="result"
-      style="
-        font-family: monospace;
-        white-space: pre;
-        margin-top: 20px;
-        padding: 10px;
-        border: 1px solid #ccc;
-      "
-    ></div>
-
-    <script>
-      // Função para mostrar informações na página
-      function addResult(text) {
-        document.getElementById("result").textContent += text + "\n";
-      }
-
-      // Criar uma conexão WebSocket
-      addResult("Iniciando conexão WebSocket...");
-      const ws = new WebSocket("wss://wembsoncket.chal.cyberjousting.com");
-
-      ws.onopen = function () {
-        addResult("Conexão estabelecida!");
-
-        // Enviar o comando para obter a flag
-        ws.send(JSON.stringify({ sender: "user", message: "/getFlag" }));
-        addResult("Comando /getFlag enviado");
-      };
-
-      ws.onmessage = function (event) {
-        try {
-          const data = JSON.parse(event.data);
-          addResult("Resposta: " + data.message);
-
-          // Mostrar em grande destaque se for a flag
-          if (data.message && data.message.includes("Flag:")) {
-            // Criar um elemento destacado para a flag
-            const flagDiv = document.createElement("div");
-            flagDiv.style.color = "red";
-            flagDiv.style.fontSize = "24px";
-            flagDiv.style.fontWeight = "bold";
-            flagDiv.style.margin = "20px 0";
-            flagDiv.style.padding = "10px";
-            flagDiv.style.backgroundColor = "#ffff00";
-            flagDiv.textContent = data.message;
-
-            // Adicionar ao corpo do documento
-            document.body.appendChild(flagDiv);
-
-            // Também mostrar no título da página
-            document.title = data.message;
-          }
-        } catch (e) {
-          addResult("Erro ao processar mensagem: " + e.message);
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        .flag {
+            color: red;
+            font-size: 30px;
+            font-weight: bold;
+            margin: 20px;
+            padding: 10px;
+            background-color: yellow;
         }
-      };
-
-      ws.onerror = function (error) {
-        addResult("Erro na conexão: " + error);
-      };
-
-      ws.onclose = function () {
-        addResult("Conexão fechada");
-      };
+    </style>
+</head>
+<body>
+    <h1>WebSocket Flag Test</h1>
+    <div id="log"></div>
+    
+    <script>
+        // Função para registrar mensagens
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += msg + '<br>';
+            console.log(msg);
+        }
+        
+        // Garantir que o script seja executado após o carregamento completo
+        window.onload = function() {
+            log("Página carregada, aguardando 500ms...");
+            
+            // Pequeno atraso para garantir que tudo esteja pronto
+            setTimeout(function() {
+                log("Tentando conectar ao WebSocket...");
+                
+                try {
+                    // Criar conexão WebSocket
+                    const ws = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
+                    
+                    ws.onopen = function() {
+                        log("Conexão WebSocket estabelecida!");
+                        
+                        // Aguardar mais 500ms antes de enviar o comando
+                        setTimeout(function() {
+                            log("Enviando comando /getFlag...");
+                            ws.send(JSON.stringify({
+                                sender: 'user',
+                                message: '/getFlag'
+                            }));
+                        }, 500);
+                    };
+                    
+                    ws.onmessage = function(event) {
+                        try {
+                            const data = JSON.parse(event.data);
+                            log("Mensagem recebida: " + data.message);
+                            
+                            // Se for a flag, destacar de forma bem visível
+                            if (data.message && data.message.includes('Flag:')) {
+                                const flagDiv = document.createElement('div');
+                                flagDiv.className = 'flag';
+                                flagDiv.textContent = data.message;
+                                document.body.appendChild(flagDiv);
+                                
+                                // Também definir como título da página
+                                document.title = data.message;
+                            }
+                        } catch (e) {
+                            log("Erro ao processar mensagem: " + e.message);
+                        }
+                    };
+                    
+                    ws.onerror = function(error) {
+                        log("Erro na conexão: " + error);
+                    };
+                    
+                    ws.onclose = function() {
+                        log("Conexão fechada");
+                    };
+                } catch (e) {
+                    log("Erro ao criar conexão: " + e);
+                }
+            }, 500);
+        };
     </script>
-  </body>
+</body>
 </html>
